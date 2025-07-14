@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile
-from .services import FinanceAnalyzer
+from src.services import FinanceAnalyzer
 
 router = APIRouter()
 analyzer = FinanceAnalyzer()

@@ -1,12 +1,52 @@
 import pandas as pd
-from .models import Transaction
+from src.models import Transaction
+from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def get_stats(transactions: List[Transaction]) -> dict:
+    """Анализ данных"""
+    if not transactions:
+        return {}
+
+    return {
+        "total_spent": sum(t.operation_amount for t in transactions if t.operation_amount < 0),
+        "categories": {t.category for t in transactions},
+        "transactions_by_date": len(transactions),
+        "top_categories": pd.Series([t.category for t in transactions]).value_counts().to_dict()
+    }
+
 
 class FinanceAnalyzer:
     @staticmethod
-    def load_transactions(file_path: str) -> list[Transaction]:
-        df = pd.read_excel(file_path)
-        return [Transaction(**row) for row in df.to_dict("records")]
+    def load_transactions(file_path: str) -> List[Transaction]:
+        try:
+            df = pd.read_excel(file_path)
 
-    def calculate_stats(self, transactions: list[Transaction]) -> dict:
-        # Анализ суммы, категорий и т.д.
-        pass
+            # Преобразуем числовые поля
+            numeric_cols = ['Сумма операции', 'Сумма платежа', 'Кэшбэк',
+                            'Бонусы (включая кэшбэк)', 'Округление на инвесткопилку',
+                            'Сумма операции с округлением']
+            for col in numeric_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce')
+
+            # Заменяем NaN в текстовых полях
+            text_cols = ['Номер карты', 'MCC', 'Описание']
+            for col in text_cols:
+                if col in df.columns:
+                    df[col] = df[col].fillna('').astype(str)
+
+            transactions = []
+            for _, row in df.iterrows():
+                try:
+                    transactions.append(Transaction(**row.to_dict()))
+                except Exception as e:
+                    logger.warning(f"Ошибка в строке {row.to_dict()}: {str(e)}")
+            return transactions
+
+        except Exception as e:
+            logger.error(f"Ошибка загрузки файла: {str(e)}")
+            raise []
