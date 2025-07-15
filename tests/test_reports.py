@@ -1,31 +1,39 @@
-from unittest.mock import patch
-
 import pytest
-from src.reports import generate_excel_report
-from src.services import Transaction
+from datetime import datetime
 import pandas as pd
-import os
-
-from tests.test_views import client
+from src.reports import get_category_spending, get_weekday_spending, get_workday_spending
 
 
 @pytest.fixture
 def sample_transactions():
-    return [
-        Transaction(id=1, date="2023-01-01", amount=100.0, category="Food"),
-        Transaction(id=2, date="2023-01-02", amount=200.0, category="Transport"),
-    ]
+    """Генерирует тестовые данные"""
+    dates = pd.date_range(end=datetime.now(), periods=90).to_pydatetime().tolist()
+    categories = ["Food", "Transport", "Entertainment"] * 30
+    amounts = [-100, -200, -300] * 30
+
+    return pd.DataFrame({"Дата операции": dates, "Категория": categories, "Сумма операции": amounts})
 
 
-def test_generate_excel_report(tmp_path, sample_transaction):
-    output_path = tmp_path / "report.xlsx"
-    generate_excel_report([sample_transaction], str(output_path))
-    assert os.path.exists(output_path)
-    assert os.path.getsize(output_path) > 0
+def test_category_spending(sample_transactions):
+    result = get_category_spending(sample_transactions, 'Food')
 
-def test_generate_report(tmp_path, sample_transaction):
-    output_path = tmp_path / "report.xlsx"
-    with patch("src.main.analyzer.load_transactions") as mock_load:
-        mock_load.return_value = [sample_transaction]
-        generate_excel_report([sample_transaction], str(output_path))
-    assert os.path.exists(output_path)
+    assert 'monthly_spending' in result
+    assert len(result['monthly_spending']) == 3  # Ровно 3 месяца
+    assert 'total' in result
+    assert result['total'] > 0  # Общая сумма трат
+
+    # Проверяем, что все значения в отчете - числа
+    assert all(isinstance(v, (int, float))
+               for v in result['monthly_spending'].values())
+
+
+def test_weekday_spending(sample_transactions):
+    result = get_weekday_spending(sample_transactions)
+    assert len(result["average_spending"]) == 7  # 7 дней недели
+    assert all(v >= 0 for v in result["average_spending"].values())
+
+
+def test_workday_spending(sample_transactions):
+    result = get_workday_spending(sample_transactions)
+    assert "weekdays" in result["average_spending"]
+    assert "weekends" in result["average_spending"]

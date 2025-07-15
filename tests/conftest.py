@@ -2,6 +2,7 @@ import pytest
 from datetime import datetime
 from src.models import Transaction
 
+
 @pytest.fixture
 def valid_transaction_data():
     return {
@@ -18,8 +19,9 @@ def valid_transaction_data():
         "Описание": "Test",
         "Бонусы (включая кэшбэк)": 1.0,
         "Округление на инвесткопилку": 0.0,
-        "Сумма операции с округлением": 100.0
+        "Сумма операции с округлением": 100.0,
     }
+
 
 @pytest.fixture
 def sample_transaction(valid_transaction_data):
