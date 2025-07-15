@@ -14,17 +14,16 @@ def sample_transactions():
     return pd.DataFrame({"Дата операции": dates, "Категория": categories, "Сумма операции": amounts})
 
 
-def test_category_spending(sample_transactions):
-    result = get_category_spending(sample_transactions, 'Food')
+def test_category_spending(sample_transactions: pd.DataFrame) -> None:
+    result = get_category_spending(sample_transactions, "Food")
 
-    assert 'monthly_spending' in result
-    assert len(result['monthly_spending']) == 3  # Ровно 3 месяца
-    assert 'total' in result
-    assert result['total'] > 0  # Общая сумма трат
+    assert "monthly_spending" in result
+    assert len(result["monthly_spending"]) == 3  # Ровно 3 месяца
+    assert "total" in result
+    assert result["total"] > 0  # Общая сумма трат
 
     # Проверяем, что все значения в отчете - числа
-    assert all(isinstance(v, (int, float))
-               for v in result['monthly_spending'].values())
+    assert all(isinstance(v, (int, float)) for v in result["monthly_spending"].values())
 
 
 def test_weekday_spending(sample_transactions):

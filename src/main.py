@@ -13,7 +13,7 @@ analyzer = FinanceAnalyzer()
 
 
 @app.post("/upload/")
-async def upload_transactions(file: UploadFile):
+async def upload_transactions(file: UploadFile) -> JSONResponse:
     """Загрузка и обработка файла с транзакциями"""
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
@@ -39,7 +39,7 @@ async def upload_transactions(file: UploadFile):
 
 
 @app.get("/report/")
-async def generate_report():
+async def generate_report() -> FileResponse:
     """Генерация стандартного отчета"""
     transactions = analyzer.load_transactions("data/operations.xlsx")
     report_path = "data/output/report.xlsx"

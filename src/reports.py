@@ -47,45 +47,32 @@ def report_to_file(default_filename: str = None):
 
 # 1. Траты по категории
 @report_to_file("category_spending.json")
-def get_category_spending(
-        df: pd.DataFrame,
-        category: str,
-        target_date: Optional[datetime] = None
-) -> dict:
+def get_category_spending(df: pd.DataFrame, category: str, target_date: Optional[datetime] = None) -> dict:
     """Возвращает траты по категории за последние 3 месяца"""
     target_date = target_date or datetime.now()
     three_months_ago = target_date - timedelta(days=90)
 
     # Фильтрация данных с учетом отрицательных сумм (траты)
     filtered = df[
-        (df['Категория'] == category) &
-        (df['Дата операции'] >= three_months_ago) &
-        (df['Дата операции'] <= target_date) &
-        (df['Сумма операции'] < 0)  # Только траты
-        ]
+        (df["Категория"] == category)
+        & (df["Дата операции"] >= three_months_ago)
+        & (df["Дата операции"] <= target_date)
+        & (df["Сумма операции"] < 0)  # Только траты
+    ]
 
     # Группировка по месяцам с абсолютными значениями
-    monthly = filtered.groupby(
-        filtered['Дата операции'].dt.to_period('M')
-    )['Сумма операции'].sum().abs()
+    monthly = filtered.groupby(filtered["Дата операции"].dt.to_period("M"))["Сумма операции"].sum().abs()
 
     # Нормализуем до ровно 3 месяцев
-    all_months = pd.period_range(
-        start=three_months_ago,
-        end=target_date,
-        freq='M'
-    )[-3:]  # Берем последние 3 месяца
+    all_months = pd.period_range(start=three_months_ago, end=target_date, freq="M")[-3:]  # Берем последние 3 месяца
 
-    result = {
-        month: float(monthly.get(month, 0))
-        for month in all_months
-    }
+    result = {month: float(monthly.get(month, 0)) for month in all_months}
 
     return {
-        'category': category,
-        'period': f"{three_months_ago.date()} - {target_date.date()}",
-        'monthly_spending': {str(k): v for k, v in result.items()},
-        'total': float(monthly.sum())
+        "category": category,
+        "period": f"{three_months_ago.date()} - {target_date.date()}",
+        "monthly_spending": {str(k): v for k, v in result.items()},
+        "total": float(monthly.sum()),
     }
 
 
