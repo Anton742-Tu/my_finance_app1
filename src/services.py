@@ -42,3 +42,9 @@ class FinanceAnalyzer:
         except Exception as e:
             logger.error(f"Ошибка загрузки файла: {str(e)}")
             raise []
+
+    def to_dataframe(self, transactions):
+        pass
+
+    def get_stats(self, transactions):
+        pass
