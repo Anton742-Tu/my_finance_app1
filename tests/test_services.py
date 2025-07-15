@@ -1,5 +1,7 @@
-import pytest
+from typing import Any, Dict
+
 import pandas as pd
+
 from src.services import FinanceAnalyzer
 
 
