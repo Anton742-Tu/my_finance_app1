@@ -13,23 +13,18 @@ class FinanceAnalyzer:
             df = pd.read_excel(file_path)
 
             # Преобразуем числовые поля
-            numeric_cols = [
-                "Сумма операции",
-                "Сумма платежа",
-                "Кэшбэк",
-                "Бонусы (включая кэшбэк)",
-                "Округление на инвесткопилку",
-                "Сумма операции с округлением",
-            ]
+            numeric_cols = ['Сумма операции', 'Сумма платежа', 'Кэшбэк',
+                            'Бонусы (включая кэшбэк)', 'Округление на инвесткопилку',
+                            'Сумма операции с округлением']
             for col in numeric_cols:
                 if col in df.columns:
-                    df[col] = pd.to_numeric(df[col].astype(str).str.replace(",", "."), errors="coerce")
+                    df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce')
 
             # Заменяем NaN в текстовых полях
-            text_cols = ["Номер карты", "MCC", "Описание"]
+            text_cols = ['Номер карты', 'MCC', 'Описание']
             for col in text_cols:
                 if col in df.columns:
-                    df[col] = df[col].fillna("").astype(str)
+                    df[col] = df[col].fillna('').astype(str)
 
             transactions = []
             for _, row in df.iterrows():
@@ -42,9 +37,3 @@ class FinanceAnalyzer:
         except Exception as e:
             logger.error(f"Ошибка загрузки файла: {str(e)}")
             raise []
-
-    def to_dataframe(self, transactions):
-        pass
-
-    def get_stats(self, transactions):
-        pass

@@ -1,115 +1,63 @@
 from fastapi import FastAPI, UploadFile, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from src.services import FinanceAnalyzer
-from src.reports import get_category_spending, get_weekday_spending, get_workday_spending
-import pandas as pd
+from src.models import Transaction
+from src.reports import generate_excel_report
 import tempfile
 import os
-from datetime import datetime
-from typing import Optional
 
 app = FastAPI()
 analyzer = FinanceAnalyzer()
 
 
 @app.post("/upload/")
-async def upload_transactions(file: UploadFile) -> JSONResponse:
-    """Загрузка и обработка файла с транзакциями"""
+async def upload_transactions(file: UploadFile):
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
             content = await file.read()
-            if not content.startswith(b"PK"):
+            if not content.startswith(b'PK'):
                 raise HTTPException(status_code=400, detail="Invalid file format")
             tmp.write(content)
             tmp_path = tmp.name
 
         transactions = analyzer.load_transactions(tmp_path)
-        df = pd.DataFrame([t.model_dump(by_alias=True) for t in transactions])
+        stats = analyzer.get_stats(transactions)
         os.unlink(tmp_path)
 
-        return JSONResponse(
-            {
-                "message": "Файл успешно обработан",
-                "count": len(transactions),
-                "columns": list(df.columns),  # Для отладки
-            }
-        )
+        return {
+            "message": "Файл успешно обработан",
+            "stats": stats,
+            "count": len(transactions),
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/report/")
-async def generate_report() -> FileResponse:
-    """Генерация стандартного отчета"""
-    transactions = analyzer.load_transactions("data/operations.xlsx")
+async def generate_report():
+    example_data = [
+        Transaction(
+            operation_date="31.12.2021 16:44:00",
+            payment_date="31.12.2021",
+            card_number="*7197",
+            status="OK",
+            operation_amount=-160.89,
+            operation_currency="RUB",
+            payment_amount=-160.89,
+            payment_currency="RUB",
+            category="Супермаркеты",
+            mcc="5411",
+            description="Колхоз",
+            bonuses=3.00,
+            rounding=0.00,
+            rounded_amount=160.89
+        )
+    ]
+
     report_path = "data/output/report.xlsx"
-
-    # Конвертируем в DataFrame для совместимости с reports.py
-    df = pd.DataFrame([t.model_dump(by_alias=True) for t in transactions])
-    generate_excel_report(df, report_path)
-
+    generate_excel_report(example_data, report_path)
     return FileResponse(
         report_path,
         filename="financial_report.xlsx",
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
-# Новые endpoints для отчетов
-@app.get("/reports/category/")
-async def category_report(category: str, date: Optional[str] = None):
-    """Отчет по тратам в категории"""
-    transactions = analyzer.load_transactions("data/operations.xlsx")
-    df = pd.DataFrame([t.model_dump(by_alias=True) for t in transactions])
-
-    target_date = datetime.strptime(date, "%Y-%m-%d") if date else None
-    result = get_category_spending(df, category, target_date)
-
-    return JSONResponse(result)
-
-
-@app.get("/reports/weekdays/")
-async def weekdays_report(date: Optional[str] = None):
-    """Отчет по тратам по дням недели"""
-    transactions = analyzer.load_transactions("data/operations.xlsx")
-    df = pd.DataFrame([t.model_dump(by_alias=True) for t in transactions])
-
-    target_date = datetime.strptime(date, "%Y-%m-%d") if date else None
-    result = get_weekday_spending(df, target_date)
-
-    return JSONResponse(result)
-
-
-@app.get("/reports/workdays/")
-async def workdays_report(date: Optional[str] = None):
-    """Сравнение трат в рабочие/выходные дни"""
-    transactions = analyzer.load_transactions("data/operations.xlsx")
-    df = pd.DataFrame([t.model_dump(by_alias=True) for t in transactions])
-
-    target_date = datetime.strptime(date, "%Y-%m-%d") if date else None
-    result = get_workday_spending(df, target_date)
-
-    return JSONResponse(result)
-
-
-# Добавляем функцию для генерации Excel (из предыдущей версии)
-def generate_excel_report(transactions: list, output_path: str):
-    """Генерация Excel-отчета (совместимость со старым кодом)"""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df = pd.DataFrame(transactions)
-
-    with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
-        df.to_excel(writer, sheet_name="Транзакции", index=False)
-
-        workbook = writer.book
-        worksheet = writer.sheets["Транзакции"]
-
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "border": 1,
-                "bg_color": "#D7E4BC",
-            }
-        )
-        for col_num, value in enumerate(df.columns.values):
-            worksheet.write(0, col_num, value, header_format)

@@ -1,116 +1,49 @@
-import json
 import pandas as pd
-from datetime import datetime, timedelta
-from functools import wraps
-import logging
-from typing import Callable, Optional
-
-logger = logging.getLogger(__name__)
+from typing import List
+import os
 
 
-# Декоратор для сохранения отчетов
-def report_to_file(default_filename: str = None):
-    def decorator(report_func: Callable):
-        @wraps(report_func)
-        def wrapper(*args, filename: str = None, **kwargs):
-            result = report_func(*args, **kwargs)
+def generate_excel_report(transactions: List[dict], output_path: str):
+    """Генерация отчета с учетом реальной структуры данных"""
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            output_filename = filename or default_filename
-            if not output_filename:
-                # Генерируем имя файла по умолчанию
-                func_name = report_func.__name__
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_filename = f"{func_name}_{timestamp}.json"
+    # Преобразуем в DataFrame
+    data = [t.model_dump(by_alias=True) for t in transactions]
+    df = pd.DataFrame(data)
 
-            try:
-                with open(output_filename, "w", encoding="utf-8") as f:
-                    if isinstance(result, (dict, list)):
-                        json.dump(result, f, ensure_ascii=False, indent=2)
-                    else:
-                        f.write(str(result))
-                logger.info(f"Отчет сохранен в файл: {output_filename}")
-            except Exception as e:
-                logger.error(f"Ошибка при сохранении отчета: {e}")
+    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Транзакции', index=False)
 
-            return result
+        workbook = writer.book
+        worksheet = writer.sheets['Транзакции']
 
-        return wrapper
+        # Форматирование
+        money_format = workbook.add_format({'num_format': '#,##0.00'})
+        date_format = workbook.add_format({'num_format': 'dd.mm.yyyy hh:mm'})
 
-    # Если декоратор вызывается без параметров
-    if callable(default_filename):
-        func = default_filename
-        default_filename = None
-        return decorator(func)
+        # Применяем форматы
+        worksheet.set_column('A:B', 20, date_format)
+        money_cols = ['E', 'G', 'I', 'L', 'M', 'N']
+        for col in money_cols:
+            worksheet.set_column(f'{col}:{col}', 15, money_format)
 
-    return decorator
+        # Добавляем сводную таблицу
+        if len(df) > 0:
+            pivot_table = df.pivot_table(
+                index='Категория',
+                values='Сумма операции',
+                aggfunc='sum'
+            ).reset_index()
 
+            pivot_table.to_excel(
+                writer,
+                sheet_name='Сводка',
+                index=False,
+                startrow=3
+            )
 
-# 1. Траты по категории
-@report_to_file("category_spending.json")
-def get_category_spending(df: pd.DataFrame, category: str, target_date: Optional[datetime] = None) -> dict:
-    """Возвращает траты по категории за последние 3 месяца"""
-    target_date = target_date or datetime.now()
-    three_months_ago = target_date - timedelta(days=90)
-
-    # Фильтрация данных с учетом отрицательных сумм (траты)
-    filtered = df[
-        (df["Категория"] == category)
-        & (df["Дата операции"] >= three_months_ago)
-        & (df["Дата операции"] <= target_date)
-        & (df["Сумма операции"] < 0)  # Только траты
-    ]
-
-    # Группировка по месяцам с абсолютными значениями
-    monthly = filtered.groupby(filtered["Дата операции"].dt.to_period("M"))["Сумма операции"].sum().abs()
-
-    # Нормализуем до ровно 3 месяцев
-    all_months = pd.period_range(start=three_months_ago, end=target_date, freq="M")[-3:]  # Берем последние 3 месяца
-
-    result = {month: float(monthly.get(month, 0)) for month in all_months}
-
-    return {
-        "category": category,
-        "period": f"{three_months_ago.date()} - {target_date.date()}",
-        "monthly_spending": {str(k): v for k, v in result.items()},
-        "total": float(monthly.sum()),
-    }
-
-
-# 2. Траты по дням недели
-@report_to_file("weekday_spending.json")
-def get_weekday_spending(df: pd.DataFrame, target_date: Optional[datetime] = None) -> dict:
-    """Возвращает средние траты по дням недели"""
-    target_date = target_date or datetime.now()
-    three_months_ago = target_date - timedelta(days=90)
-
-    filtered = df[(df["Дата операции"] >= three_months_ago) & (df["Дата операции"] <= target_date)]
-
-    # Добавляем день недели (0 - понедельник, 6 - воскресенье)
-    filtered["weekday"] = filtered["Дата операции"].dt.weekday
-    weekdays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-
-    result = filtered.groupby("weekday")["Сумма операции"].mean().abs().to_dict()
-
-    return {
-        "period": f"{three_months_ago.date()} - {target_date.date()}",
-        "average_spending": {weekdays[k]: round(v, 2) for k, v in result.items()},
-    }
-
-
-# 3. Траты в рабочие/выходные дни
-@report_to_file("workday_spending.json")
-def get_workday_spending(df: pd.DataFrame, target_date: Optional[datetime] = None) -> dict:
-    """Сравнивает траты в рабочие и выходные дни"""
-    target_date = target_date or datetime.now()
-    three_months_ago = target_date - timedelta(days=90)
-
-    filtered = df[(df["Дата операции"] >= three_months_ago) & (df["Дата операции"] <= target_date)]
-
-    # Определяем рабочие дни (0-4 - пн-пт)
-    filtered["is_weekend"] = filtered["Дата операции"].dt.weekday >= 5
-    result = filtered.groupby("is_weekend")["Сумма операции"].mean().abs().to_dict()
-
-    return {
-        "period": f"{three_months_ago.date()} - {target_date.date()}",
-        "average_spending": {"weekdays": round(result.get(False, 0), 2), "weekends": round(result.get(True, 0), 2)},
-    }
+            # Форматирование сводки
+            pivot_sheet = writer.sheets['Сводка']
+            pivot_sheet.write(0, 0, "Итого потрачено:")
+            total_formula = f"=SUM(C4:C{len(pivot_table) + 3})"
+            pivot_sheet.write_formula(0, 1, total_formula, money_format)

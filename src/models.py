@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime
 from typing import Optional
 
-
 class Transaction(BaseModel):
     operation_date: datetime = Field(..., alias="Дата операции")
     payment_date: datetime = Field(..., alias="Дата платежа")
@@ -20,14 +19,17 @@ class Transaction(BaseModel):
     rounding: float = Field(..., alias="Округление на инвесткопилку")
     rounded_amount: float = Field(..., alias="Сумма операции с округлением")
 
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid"
+    )
 
-    @field_validator("operation_date", "payment_date", mode="before")
+    @field_validator('operation_date', 'payment_date', mode='before')
     def parse_dates(cls, value):
         if isinstance(value, str):
             try:
                 # Для формата "31.12.2021 16:44:00"
-                if " " in value:
+                if ' ' in value:
                     return datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
                 # Для формата "31.12.2021"
                 return datetime.strptime(value, "%d.%m.%Y")
@@ -35,7 +37,7 @@ class Transaction(BaseModel):
                 raise ValueError("Invalid date format")
         return value
 
-    @field_validator("mcc", mode="before")
+    @field_validator('mcc', mode='before')
     def convert_mcc_to_string(cls, value):
         if value is not None:
             return str(value)
