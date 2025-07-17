@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 import pandas as pd
+
 # Импорт сервисов
 from fastapi import UploadFile
 from fastapi.responses import JSONResponse
@@ -14,33 +15,19 @@ from fastapi.responses import FileResponse
 from .services import (
     analyze_cashback,
     investment_bank,
-    generate_excel_report,
     load_transactions_from_excel,
-    simple_search, find_phone_transactions, find_person_transfers
+    simple_search,
+    find_phone_transactions,
+    find_person_transfers,
 )
-
-app = FastAPI()
-
-@app.get("/report/")
-async def generate_report():
-    try:
-        transactions = load_transactions_from_excel(OPERATIONS_FILE)
-        report_path = "data/report.xlsx"
-        generate_excel_report(transactions, report_path)
-        return FileResponse(report_path)
-    except Exception as e:
-        logger.error(f"Report generation failed: {str(e)}")
-        raise HTTPException(500, "Report generation error")
-
 from src.models import Transaction  # Модель данных
+
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Конфигурация
-
-
 DATA_DIR = Path("data")
 OPERATIONS_FILE = DATA_DIR / "operations.xlsx"
 REPORTS_DIR = DATA_DIR / "reports"
@@ -48,15 +35,44 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     """Инициализация при запуске"""
     logger.info("Starting Finance Analyzer API")
     if not OPERATIONS_FILE.exists():
         logger.warning("Operations file not found, creating empty template")
-        pd.DataFrame(columns=[
-            'operation_date', 'amount', 'category',
-            'description', 'cashback'
-        ]).to_excel(OPERATIONS_FILE, index=False)
+        pd.DataFrame(columns=["operation_date", "amount", "category", "description", "cashback"]).to_excel(
+            OPERATIONS_FILE, index=False
+        )
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Инициализация приложения"""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if not OPERATIONS_FILE.exists():
+        pd.DataFrame(columns=["operation_date", "amount", "category", "description", "cashback"]).to_excel(
+            OPERATIONS_FILE, index=False
+        )
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/report/")
+async def generate_report():
+    try:
+        df = pd.read_excel(OPERATIONS_FILE)
+        report_path = DATA_DIR / "financial_report.xlsx"
+        df.to_excel(report_path, index=False)
+        return FileResponse(
+            report_path,
+            filename="financial_report.xlsx",
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except Exception as e:
+        logger.error(f"Report generation failed: {str(e)}")
+        raise HTTPException(500, detail=str(e))
 
 
 @app.post("/upload/", response_model=Dict[str, Any])
@@ -72,7 +88,7 @@ async def upload_transactions(file: UploadFile) -> JSONResponse:
     """
     try:
         # Валидация файла
-        if not file.filename.endswith(('.xlsx', '.xls')):
+        if not file.filename.endswith((".xlsx", ".xls")):
             raise HTTPException(400, "Only Excel files accepted")
 
         # Сохранение во временный файл
@@ -91,15 +107,16 @@ async def upload_transactions(file: UploadFile) -> JSONResponse:
         # Анализ данных
         cashback_stats = analyze_cashback(transactions, datetime.now().year, datetime.now().month)
 
-        return JSONResponse({
-            "status": "success",
-            "transactions_loaded": len(transactions),
-            "cashback_by_category": cashback_stats,
-            "investment_opportunity": investment_bank(
-                f"{datetime.now().year}-{datetime.now().month:02d}",
-                transactions
-            )
-        })
+        return JSONResponse(
+            {
+                "status": "success",
+                "transactions_loaded": len(transactions),
+                "cashback_by_category": cashback_stats,
+                "investment_opportunity": investment_bank(
+                    f"{datetime.now().year}-{datetime.now().month:02d}", transactions
+                ),
+            }
+        )
 
     except Exception as e:
         logger.error(f"Upload failed: {str(e)}")
@@ -108,8 +125,8 @@ async def upload_transactions(file: UploadFile) -> JSONResponse:
 
 @app.get("/analysis/cashback/", response_model=Dict[str, float])
 async def get_cashback_analysis(
-        year: int = Query(..., description="Год для анализа"),
-        month: int = Query(..., description="Месяц для анализа (1-12)")
+    year: int = Query(..., description="Год для анализа"),
+    month: int = Query(..., description="Месяц для анализа (1-12)"),
 ) -> JSONResponse:
     """
     Анализ выгодных категорий для кешбэка
@@ -132,8 +149,8 @@ async def get_cashback_analysis(
 
 @app.get("/analysis/investment/", response_model=Dict[str, float])
 async def get_investment_analysis(
-        month: str = Query(..., regex=r"^\d{4}-\d{2}$", description="Месяц в формате YYYY-MM"),
-        limit: int = Query(50, enum=[10, 50, 100], description="Шаг округления (10, 50, 100)")
+    month: str = Query(..., regex=r"^\d{4}-\d{2}$", description="Месяц в формате YYYY-MM"),
+    limit: int = Query(50, enum=[10, 50, 100], description="Шаг округления (10, 50, 100)"),
 ) -> JSONResponse:
     """
     Расчет суммы для инвесткопилки
@@ -156,8 +173,8 @@ async def get_investment_analysis(
 
 @app.get("/search/", response_model=List[Transaction])
 async def search_transactions(
-        query: str = Query(..., description="Строка для поиска"),
-        search_type: str = Query("simple", enum=["simple", "phone", "person"])
+    query: str = Query(..., description="Строка для поиска"),
+    search_type: str = Query("simple", enum=["simple", "phone", "person"]),
 ) -> JSONResponse:
     """
     Поиск транзакций по различным критериям
@@ -183,35 +200,6 @@ async def search_transactions(
     except Exception as e:
         logger.error(f"Search failed: {str(e)}")
         raise HTTPException(500, "Search error")
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Инициализация приложения"""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if not OPERATIONS_FILE.exists():
-        pd.DataFrame(columns=[
-            'operation_date', 'amount', 'category',
-            'description', 'cashback'
-        ]).to_excel(OPERATIONS_FILE, index=False)
-    yield
-
-app = FastAPI(lifespan=lifespan)
-
-@app.get("/report/")
-async def generate_report():
-    try:
-        df = pd.read_excel(OPERATIONS_FILE)
-        report_path = DATA_DIR / "financial_report.xlsx"
-        df.to_excel(report_path, index=False)
-        return FileResponse(
-            report_path,
-            filename="financial_report.xlsx",
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    except Exception as e:
-        logger.error(f"Report generation failed: {str(e)}")
-        raise HTTPException(500, detail=str(e))
 
 
 if __name__ == "__main__":
