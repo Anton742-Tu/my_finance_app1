@@ -7,3 +7,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def load_user_settings():
+    return None

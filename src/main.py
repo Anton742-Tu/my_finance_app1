@@ -3,7 +3,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
-
+from src.views import app
 import pandas as pd
 
 # Импорт сервисов
@@ -12,14 +12,6 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import FileResponse
-from .services import (
-    analyze_cashback,
-    investment_bank,
-    load_transactions_from_excel,
-    simple_search,
-    find_phone_transactions,
-    find_person_transfers,
-)
 from src.models import Transaction  # Модель данных
 
 
