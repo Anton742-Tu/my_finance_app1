@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from src.models.operations import Operation
 
 router = APIRouter(prefix="/cashback")
 

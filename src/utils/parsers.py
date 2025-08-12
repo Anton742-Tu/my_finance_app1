@@ -35,3 +35,10 @@ def parse_excel_to_db(file_path: str):
 
     db.commit()
     db.close()
+
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# В цикле обработки:
+logger.info(f"Обработана операция: {row['Описание']}")

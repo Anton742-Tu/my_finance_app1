@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from src.config import Settings
-from src.web import home, events
+
 from src.services import cashback, invest
+from src.web import home, events
 
 app = FastAPI()
 app.include_router(home.router)
