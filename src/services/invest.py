@@ -1,2 +1,2 @@
-def router():
+def router() -> None:
     return None
