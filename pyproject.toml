@@ -38,6 +38,8 @@ pytest-mock = "^3.14.1"
 httpx = "^0.28.1"
 pytest-cov = "^6.2.1"
 pytest = "^8.4.1"
+factory-boy = "^3.3.3"
+freezegun = "^1.5.5"
 
 
 [tool.poetry.group.lint.dependencies]
