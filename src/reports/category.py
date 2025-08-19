@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from src.utils.database import get_db
-from src.models.operations import Operation  # Исправлен импорт
+from src.models.operation import Operation  # Исправлен импорт
 
 router = APIRouter(prefix="/reports")
 

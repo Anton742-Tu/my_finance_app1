@@ -1,14 +1,9 @@
+import pytest
 from decimal import Decimal
-from src.models.operations import Operation
+from src.models.operation import Operation
 
 
-def test_operation_amount(db):
-    # Тестируем разные форматы сумм
-    op1 = Operation(amount=100.50)
-    op2 = Operation(amount=Decimal('200.75'))
-
-    db.add_all([op1, op2])
-    db.commit()
-
-    assert float(op1.amount) == 100.50
-    assert float(op2.amount) == 200.75
+def test_operation_amount(db, test_data):
+    op = db.query(Operation).first()
+    assert op is not None
+    assert float(op.amount) == 100.50

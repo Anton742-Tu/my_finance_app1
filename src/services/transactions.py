@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from src.models.operations import Operation
+from src.models.operation import Operation
 from src.utils.database import get_db
 from typing import List, Dict, Any
 

@@ -2,16 +2,19 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.utils.database import Base
-from src.models.operations import Operation
-from datetime import datetime
 
 
 @pytest.fixture(scope="session")
 def engine():
-    """Движок SQLite в памяти для тестов"""
+    """Движок тестовой БД"""
     engine = create_engine("sqlite:///:memory:")
+
+    # Создаем таблицы напрямую
     Base.metadata.create_all(engine)
+
     yield engine
+
+    # Очистка
     Base.metadata.drop_all(engine)
 
 
@@ -25,28 +28,31 @@ def db(engine):
 
     yield session
 
+    # Откат и закрытие
     session.close()
     transaction.rollback()
     connection.close()
 
 
 @pytest.fixture
-def test_operations(db):
-    """Тестовые данные операций"""
+def test_data(db):
+    """Создает тестовые данные"""
+    from src.models.operation import Operation
+    from datetime import datetime
+
     operations = [
         Operation(
-            date=datetime(2023, 1, 1),
-            amount=100.0,
+            date=datetime(2023, 1, 1, 12, 0),
+            payment_date=datetime(2023, 1, 2),
+            card_number="*1234",
+            status="OK",
+            amount=100.50,
+            currency="RUB",
             category="Food",
             description="Lunch"
-        ),
-        Operation(
-            date=datetime(2023, 1, 2),
-            amount=200.0,
-            category="Transport",
-            description="Taxi"
         )
     ]
+
     db.add_all(operations)
     db.commit()
     return operations
