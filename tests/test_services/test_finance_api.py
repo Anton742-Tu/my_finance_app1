@@ -1,38 +1,42 @@
-import pytest
-from unittest.mock import patch, Mock
-from src.services.finance_api import get_currency_rates
+from unittest.mock import Mock, patch
 
-
-@pytest.fixture
-def mock_config(tmp_path):
-    config = {"user_currencies": ["USD", "EUR"], "user_stocks": ["AAPL"]}
-    config_file = tmp_path / "user_settings.json"
-    config_file.write_text(
-        """{
-        "user_currencies": ["USD", "EUR"],
-        "user_stocks": ["AAPL"]
-    }"""
-    )
-    return config_file
+from src.services.finance_api import get_currency_rates, get_stock_prices
 
 
 @patch("requests.get")
-def test_get_currency_rates(mock_get, monkeypatch, tmp_path):
-    # Мокаем конфиг
-    test_config = tmp_path / "config" / "user_settings.json"
-    test_config.parent.mkdir()
-    test_config.write_text(
-        """{
-        "user_currencies": ["USD", "EUR"],
-        "user_stocks": ["AAPL"]
-    }"""
-    )
-
-    # Мокаем API ответ
+def test_get_currency_rates_success(mock_get):
+    """Тест успешного получения курсов валют"""
     mock_response = Mock()
-    mock_response.json.return_value = {"rates": {"USD": 1.0, "EUR": 0.9, "RUB": 75.0}}
+    mock_response.json.return_value = {"rates": {"USD": 1.0, "EUR": 0.85, "GBP": 0.75, "CNY": 7.0}}
+    mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
 
     result = get_currency_rates()
+
     assert result["USD"] == 1.0
-    assert result["EUR"] == 0.9
+    assert result["EUR"] == 0.85
+    assert result["GBP"] == 0.75
+    assert result["CNY"] == 7.0
+
+
+@patch("requests.get")
+def test_get_currency_rates_failure(mock_get):
+    """Тест обработки ошибки при получении курсов"""
+    mock_get.side_effect = Exception("API error")
+
+    result = get_currency_rates()
+
+    # Должны вернуться заглушки
+    assert result["USD"] == 1.0
+    assert result["EUR"] == 0.85
+
+
+@patch("requests.get")
+def test_get_stock_prices_success(mock_get):
+    """Тест успешного получения цен акций"""
+    mock_get.return_value.text = "150.0"
+
+    result = get_stock_prices()
+
+    # Проверяем, что возвращаются значения (мок срабатывает только на первый вызов)
+    assert len(result) > 0

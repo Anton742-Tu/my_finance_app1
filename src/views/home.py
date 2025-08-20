@@ -1,6 +1,7 @@
 from datetime import datetime
+
+from src.services.analyzer import analyze_spending, calculate_cashback, get_top_transactions
 from src.services.excel_processor import load_operations_from_excel
-from src.services.analyzer import analyze_spending, get_top_transactions, calculate_cashback
 from src.services.finance_api import get_currency_rates, get_stock_prices
 
 
@@ -15,16 +16,16 @@ def get_home_data(excel_path: str, target_date: datetime) -> dict:
     analysis = analyze_spending(monthly_ops)
 
     return {
-        'greeting': _get_greeting(target_date),
-        'total_spent': analysis['total_spent'],
-        'cashback': calculate_cashback(monthly_ops),
-        'top_transactions': get_top_transactions(monthly_ops, 5),
-        'currencies': get_currency_rates(),
-        'stocks': get_stock_prices()
+        "greeting": get_greeting(target_date),
+        "total_spent": analysis["total_spent"],
+        "cashback": calculate_cashback(monthly_ops),
+        "top_transactions": get_top_transactions(monthly_ops, 5),
+        "currencies": get_currency_rates(),
+        "stocks": get_stock_prices(),
     }
 
 
-def _get_greeting(date: datetime) -> str:
+def get_greeting(date: datetime) -> str:
     hour = date.hour
     if 5 <= hour < 12:
         return "Доброе утро"

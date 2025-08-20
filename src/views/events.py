@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
-from fastapi import APIRouter
-import pandas as pd
 from typing import Literal
-from src.services.finance_api import get_currency_rates, get_stock_prices
 
+import pandas as pd
+from fastapi import APIRouter
+
+from src.services.finance_api import get_currency_rates, get_stock_prices
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ def get_date_range(date: datetime, period: str) -> tuple[datetime, datetime]:
     return start, date
 
 
-def get_transactions(start_date, end_date):
+def get_transactions(_start_date, _end_date):
     pass
 
 
@@ -55,7 +56,3 @@ async def events_page(date_str: str, period: Literal["W", "M", "Y", "ALL"] = "M"
         "currencies": get_currency_rates(),
         "stocks": get_stock_prices(),
     }
-
-
-def get_events_data():
-    return None

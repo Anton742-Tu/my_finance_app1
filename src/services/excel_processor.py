@@ -1,6 +1,8 @@
-import pandas as pd
-from typing import List
 from pathlib import Path
+from typing import List
+
+import pandas as pd
+
 from src.models.operation import Operation
 
 
@@ -15,18 +17,18 @@ def load_operations_from_excel(file_path: str) -> List[Operation]:
     for _, row in df.iterrows():
         try:
             operation_data = {
-                'Дата операции': str(row['Дата операции']),
-                'Дата платежа': str(row['Дата платежа']),
-                'Номер карты': str(row.get('Номер карты', '')),
-                'Статус': str(row.get('Статус', 'OK')),
-                'Сумма операции': str(row['Сумма операции']),
-                'Валюта операции': str(row.get('Валюта операции', 'RUB')),
-                'Кэшбэк': str(row.get('Кэшбэк', 0)),
-                'Категория': str(row.get('Категория', '')),
-                'MCC': row.get('MCC'),
-                'Описание': str(row.get('Описание', '')),
-                'Бонусы (включая кэшбэк)': str(row.get('Бонусы (включая кэшбэк)', 0)),
-                'Округление на инвесткопилку': str(row.get('Округление на инвесткопилку', 0))
+                "Дата операции": str(row["Дата операции"]),
+                "Дата платежа": str(row["Дата платежа"]),
+                "Номер карты": str(row.get("Номер карты", "")),
+                "Статус": str(row.get("Статус", "OK")),
+                "Сумма операции": str(row["Сумма операции"]),
+                "Валюта операции": str(row.get("Валюта операции", "RUB")),
+                "Кэшбэк": str(row.get("Кэшбэк", 0)),
+                "Категория": str(row.get("Категория", "")),
+                "MCC": row.get("MCC"),
+                "Описание": str(row.get("Описание", "")),
+                "Бонусы (включая кэшбэк)": str(row.get("Бонусы (включая кэшбэк)", 0)),
+                "Округление на инвесткопилку": str(row.get("Округление на инвесткопилку", 0)),
             }
 
             operation = Operation.from_dict(operation_data)

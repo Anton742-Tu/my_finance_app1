@@ -1,23 +1,59 @@
+from datetime import datetime
+
 import pandas as pd
-from src.services.excel_processor import load_operations_from_excel
+import pytest
+
+from src.services.excel_processor import filter_operations_by_date, load_operations_from_excel
 
 
-def test_load_operations(tmp_path):
-    """Тест загрузки операций из Excel"""
-    test_file = tmp_path / "test.xlsx"
+@pytest.fixture
+def sample_excel(tmp_path):
+    """Создает тестовый Excel файл"""
+    file_path = tmp_path / "test_operations.xlsx"
 
     data = {
-        'Дата операции': ['01.01.2023 12:00:00'],
-        'Дата платежа': ['02.01.2023'],
-        'Сумма операции': ['-100,50'],
-        'Валюта операции': ['RUB'],
-        'Категория': ['Test']
+        "Дата операции": ["01.01.2023 12:00:00", "02.01.2023 13:00:00"],
+        "Дата платежа": ["02.01.2023", "03.01.2023"],
+        "Номер карты": ["*1234", "*5678"],
+        "Статус": ["OK", "OK"],
+        "Сумма операции": ["-100,50", "-200,75"],
+        "Валюта операции": ["RUB", "RUB"],
+        "Кэшбэк": ["1,50", "2,00"],
+        "Категория": ["Food", "Transport"],
+        "MCC": [5411, 4121],
+        "Описание": ["Lunch", "Taxi"],
+        "Бонусы (включая кэшбэк)": ["2,00", "3,00"],
+        "Округление на инвесткопилку": ["0,00", "0,00"],
     }
 
     df = pd.DataFrame(data)
-    df.to_excel(test_file, index=False)
+    df.to_excel(file_path, index=False)
+    return file_path
 
-    operations = load_operations_from_excel(str(test_file))
-    assert len(operations) == 1
+
+def test_load_operations_from_excel(sample_excel):
+    """Тест загрузки операций из Excel"""
+    operations = load_operations_from_excel(str(sample_excel))
+
+    assert len(operations) == 2
     assert operations[0].amount == 100.50
-    assert operations[0].category == "Test"
+    assert operations[1].amount == 200.75
+    assert operations[0].category == "Food"
+    assert operations[1].category == "Transport"
+
+
+def test_load_operations_file_not_found() -> None:
+    """Тест обработки отсутствующего файла"""
+    with pytest.raises(FileNotFoundError):
+        load_operations_from_excel("nonexistent.xlsx")
+
+
+def test_filter_operations_by_date(sample_excel):
+    """Тест фильтрации операций по дате"""
+    operations = load_operations_from_excel(str(sample_excel))
+
+    # Фильтруем только первую операцию
+    filtered = filter_operations_by_date(operations, datetime(2023, 1, 1), datetime(2023, 1, 1, 23, 59))
+
+    assert len(filtered) == 1
+    assert filtered[0].amount == 100.50

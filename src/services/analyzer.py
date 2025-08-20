@@ -1,5 +1,6 @@
-from typing import List, Dict
 from decimal import Decimal
+from typing import Dict, List
+
 from src.models.operation import Operation
 
 
@@ -9,11 +10,11 @@ def analyze_spending(operations: List[Operation]) -> Dict:
 
     by_category = {}
     for op in expenses:
-        by_category[op.category] = by_category.get(op.category, Decimal('0')) + op.amount
+        by_category[op.category] = by_category.get(op.category, Decimal("0")) + op.amount
 
     return {
-        'total_spent': sum(op.amount for op in expenses),
-        'by_category': dict(sorted(by_category.items(), key=lambda x: x[1], reverse=True))
+        "total_spent": sum(op.amount for op in expenses),
+        "by_category": dict(sorted(by_category.items(), key=lambda x: x[1], reverse=True)),
     }
 
 
