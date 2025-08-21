@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import List
 
 import pytest
 
@@ -8,7 +9,7 @@ from src.services.analyzer import analyze_spending, calculate_cashback, get_top_
 
 
 @pytest.fixture
-def sample_operations():
+def sample_operations() -> List[Operation]:
     """Тестовые операции: 2 расхода и 1 доход"""
     return [
         Operation(
@@ -56,7 +57,7 @@ def sample_operations():
     ]
 
 
-def test_analyze_spending(sample_operations):
+def test_analyze_spending(sample_operations: List[Operation]) -> None:
     """Тест анализа расходов (должны учитываться только положительные суммы)"""
     result = analyze_spending(sample_operations)
 
@@ -66,7 +67,7 @@ def test_analyze_spending(sample_operations):
     assert "Income" not in result["by_category"]  # Доходы не должны учитываться
 
 
-def test_get_top_transactions(sample_operations):
+def test_get_top_transactions(sample_operations: List[Operation]) -> None:
     """Тест получения топ операций по сумме"""
     top_ops = get_top_transactions(sample_operations, 2)
 
@@ -75,7 +76,7 @@ def test_get_top_transactions(sample_operations):
     assert top_ops[1].amount == Decimal("100.00")  # Вторая по величине
 
 
-def test_calculate_cashback(sample_operations):
+def test_calculate_cashback(sample_operations: List[Operation]) -> None:
     """Тест расчета кешбэка"""
     cashback = calculate_cashback(sample_operations)
     assert cashback == Decimal("3.00")  # 1.00 + 2.00 + 0.00

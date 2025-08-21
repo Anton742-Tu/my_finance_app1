@@ -1,4 +1,6 @@
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -7,7 +9,7 @@ from src.services.excel_processor import filter_operations_by_date, load_operati
 
 
 @pytest.fixture
-def sample_excel(tmp_path):
+def sample_excel(tmp_path: Path) -> Path:
     """Создает тестовый Excel файл"""
     file_path = tmp_path / "test_operations.xlsx"
 
@@ -31,7 +33,7 @@ def sample_excel(tmp_path):
     return file_path
 
 
-def test_load_operations_from_excel(sample_excel):
+def test_load_operations_from_excel(sample_excel: Path) -> None:
     """Тест загрузки операций из Excel"""
     operations = load_operations_from_excel(str(sample_excel))
 
@@ -48,7 +50,7 @@ def test_load_operations_file_not_found() -> None:
         load_operations_from_excel("nonexistent.xlsx")
 
 
-def test_filter_operations_by_date(sample_excel):
+def test_filter_operations_by_date(sample_excel: Path) -> None:
     """Тест фильтрации операций по дате"""
     operations = load_operations_from_excel(str(sample_excel))
 

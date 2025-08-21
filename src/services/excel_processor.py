@@ -1,3 +1,4 @@
+from datetime import datetime  # Добавляем импорт datetime
 from pathlib import Path
 from typing import List
 
@@ -41,6 +42,8 @@ def load_operations_from_excel(file_path: str) -> List[Operation]:
     return operations
 
 
-def filter_operations_by_date(operations: List[Operation], start_date, end_date) -> List[Operation]:
+def filter_operations_by_date(
+    operations: List[Operation], start_date: datetime, end_date: datetime
+) -> List[Operation]:
     """Фильтрует операции по дате"""
     return [op for op in operations if start_date <= op.date <= end_date]

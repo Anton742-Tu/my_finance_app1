@@ -1,10 +1,11 @@
+from typing import Any, Dict  # Добавляем импорты для типов
 from unittest.mock import Mock, patch
 
 from src.services.finance_api import get_currency_rates, get_stock_prices
 
 
 @patch("requests.get")
-def test_get_currency_rates_success(mock_get):
+def test_get_currency_rates_success(mock_get: Mock) -> None:
     """Тест успешного получения курсов валют"""
     mock_response = Mock()
     mock_response.json.return_value = {"rates": {"USD": 1.0, "EUR": 0.85, "GBP": 0.75, "CNY": 7.0}}
@@ -20,7 +21,7 @@ def test_get_currency_rates_success(mock_get):
 
 
 @patch("requests.get")
-def test_get_currency_rates_failure(mock_get):
+def test_get_currency_rates_failure(mock_get: Mock) -> None:
     """Тест обработки ошибки при получении курсов"""
     mock_get.side_effect = Exception("API error")
 
@@ -32,7 +33,7 @@ def test_get_currency_rates_failure(mock_get):
 
 
 @patch("requests.get")
-def test_get_stock_prices_success(mock_get):
+def test_get_stock_prices_success(mock_get: Mock) -> None:
     """Тест успешного получения цен акций"""
     mock_get.return_value.text = "150.0"
 

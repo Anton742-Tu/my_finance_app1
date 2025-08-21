@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -42,7 +42,7 @@ class Operation:
         except (ValueError, KeyError) as e:
             raise ValueError(f"Ошибка создания операции из данных: {data}. Ошибка: {e}")
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Преобразует операцию в словарь (для JSON ответа)"""
         return {
             "date": self.date.isoformat(),

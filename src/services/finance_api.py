@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import requests
 
@@ -43,7 +43,7 @@ def get_stock_prices() -> Dict[str, float]:
         return {"AAPL": 150.0, "GOOGL": 2800.0, "MSFT": 300.0, "TSLA": 250.0, "AMZN": 3300.0}
 
 
-def _load_config() -> None:
+def _load_config() -> Dict[str, List[str]]:  # Добавить аннотацию
     config_paths = [
         Path("config/user_settings.json"),
         Path("src/config/user_settings.json"),
@@ -52,10 +52,10 @@ def _load_config() -> None:
 
     for path in config_paths:
         if path.exists():
-            return json.loads(path.read_text())
+            data = json.loads(path.read_text())
+            return {
+                "user_currencies": data.get("user_currencies", ["USD", "EUR"]),
+                "user_stocks": data.get("user_stocks", ["AAPL", "GOOGL"]),
+            }
 
-    # Конфиг по умолчанию
     return {"user_currencies": ["USD", "EUR"], "user_stocks": ["AAPL", "GOOGL"]}
-
-
-CONFIG = _load_config()
