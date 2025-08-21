@@ -161,6 +161,55 @@ rates = get_currency_rates()
 print("Курс USD:", rates["USD"])
 print("Курс EUR:", rates["EUR"])
 ```
+## 🎯 Пример использования
+### src/services/services.py
+```python
+from src.services.excel_processor import load_operations_from_excel
+from src.services.services import *
+
+# Загрузка данных
+operations = load_operations_from_excel("data/operations.xlsx")
+transactions = convert_operations_to_transactions(operations)
+
+# Анализ кешбэка
+cashback_analysis = analyze_cashback_categories(transactions, 2024, 1)
+print("Выгодные категории:", cashback_analysis)
+
+# Поиск переводов
+person_transfers = find_person_transfers(transactions)
+print("Переводы физлицам:", len(person_transfers))
+```
+## 📋 Новые эндпоинты API:
+ - GET /api/cashback-analysis/{year}/{month} - Анализ кешбэка по категориям
+
+ - GET /api/investment-savings/{month} - Расчет инвесткопилки
+
+ - GET /api/search?query=текст - Поиск транзакций
+
+ - GET /api/phone-transactions - Транзакции с телефонами
+
+ - GET /api/person-transfers - Переводы физлицам
+
+ - GET /health - Проверка здоровья приложения
+
+## 🚀 Примеры запросов:
+```bash
+# Анализ кешбэка за январь 2024
+curl "http://localhost:8000/api/cashback-analysis/2024/1"
+
+# Расчет инвесткопилки за январь 2024 с лимитом 50
+curl "http://localhost:8000/api/investment-savings/2024-01?limit=50"
+
+# Поиск транзакций с "Такси"
+curl "http://localhost:8000/api/search?query=Такси"
+
+# Транзакции с телефонными номерами
+curl "http://localhost:8000/api/phone-transactions"
+
+# Переводы физическим лицам
+curl "http://localhost:8000/api/person-transfers"
+```
+
 ## 🐛 Troubleshooting
 ### common issues:
 1. Файл не найден - убедитесь что файл operations.xlsx exists в папке data/

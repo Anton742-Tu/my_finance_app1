@@ -1,30 +1,186 @@
 from datetime import datetime
-from typing import Any, Dict  # добавим для аннотаций
+from typing import Any, Dict, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
-from src.views.events import events_page, get_date_range  # добавим импорт
+from src.services.excel_processor import load_operations_from_excel
+from src.services.services import (
+    analyze_cashback_categories,
+    convert_operations_to_transactions,
+    find_person_transfers,
+    find_phone_transactions,
+    investment_bank,
+    simple_search,
+)
+from src.views.events import events_page
 from src.views.home import get_home_data
 
-app = FastAPI()
+app = FastAPI(title="My Finance App API", version="1.0.0")
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    """Загрузка операций при запуске приложения"""
+    try:
+        global operations, transactions
+        operations = load_operations_from_excel("data/operations.xlsx")
+        transactions = convert_operations_to_transactions(operations)
+        print(f"Успешно загружено {len(operations)} операций")
+    except FileNotFoundError as e:
+        print(f"Ошибка: Файл не найден: {e}")
+        operations = []
+        transactions = []
+    except Exception as e:
+        print(f"Ошибка загрузки операций: {e}")
+        operations = []
+        transactions = []
 
 
 @app.get("/")
-async def home(date: str = "2024-01-15 12:00:00") -> Dict[str, Any]:  # добавили возвращаемый тип
+async def home(date: str = "2024-01-15 12:00:00") -> Dict[str, Any]:
     """Главная страница с финансовой аналитикой"""
-    target_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-    data = get_home_data("data/operations.xlsx", target_date)
-    return data
+    try:
+        target_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+        data = get_home_data("data/operations.xlsx", target_date)
+        return data
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Неверный формат даты. Используйте YYYY-MM-DD HH:MM:SS")
 
 
-@app.get("/events")
-async def events(date: str) -> Dict[str, Any]:  # добавили возвращаемый тип
+@app.get("/events/{date_str}")
+async def events(date_str: str, period: str = "M") -> Dict[str, Any]:
     """Страница событий с фильтрацией по дате"""
-    target_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+    try:
+        return await events_page(date_str, period)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Неверный формат даты")
 
-    # Исправляем вызов get_date_range - передаем правильные аргументы
-    start_date, end_date = get_date_range(target_date, "M")  # период по умолчанию
 
-    # Вызываем events_page с правильными параметрами
-    data = await events_page(date, "M")  # передаем date_str и период
-    return data
+# Новые эндпоинты для сервисов
+
+
+@app.get("/api/cashback-analysis/{year}/{month}")
+async def cashback_analysis(year: int, month: int) -> Dict[str, float]:
+    """
+    Анализ выгодных категорий для повышенного кешбэка
+
+    Args:
+        year: Год для анализа (например, 2024)
+        month: Месяц для анализа (1-12)
+
+    Returns:
+        Словарь с категориями и суммами кешбэка
+    """
+    if not 1 <= month <= 12:
+        raise HTTPException(status_code=400, detail="Месяц должен быть от 1 до 12")
+
+    try:
+        result = analyze_cashback_categories(transactions, year, month)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка анализа: {str(e)}")
+
+
+@app.get("/api/investment-savings/{month}")
+async def investment_savings(month: str, limit: int = 100) -> Dict[str, float]:
+    """
+    Расчет суммы для инвесткопилки через округление трат
+
+    Args:
+        month: Месяц в формате YYYY-MM (например, 2024-01)
+        limit: Предел округления (10, 50, 100) - по умолчанию 100
+
+    Returns:
+        Сумма для инвесткопилки
+    """
+    if limit not in [10, 50, 100]:
+        raise HTTPException(status_code=400, detail="Лимит должен быть 10, 50 или 100")
+
+    try:
+        # Конвертируем операции в формат для сервиса
+        transactions_for_investment = [
+            {
+                "date": op.date.isoformat(),
+                "amount": float(op.amount),
+                "category": op.category,
+                "description": op.description,
+            }
+            for op in operations
+        ]
+
+        savings = investment_bank(month, transactions_for_investment, limit)
+        return {"savings": savings}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка расчета: {str(e)}")
+
+
+@app.get("/api/search")
+async def search_transactions(query: str) -> List[Dict[str, Any]]:
+    """
+    Поиск транзакций по описанию или категории
+
+    Args:
+        query: Строка для поиска
+
+    Returns:
+        Список найденных транзакций
+    """
+    try:
+        result = simple_search(transactions, query)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
+
+
+@app.get("/api/phone-transactions")
+async def phone_transactions() -> List[Dict[str, Any]]:
+    """
+    Поиск транзакций с телефонными номерами в описании
+
+    Returns:
+        Список транзакций с телефонными номерами
+    """
+    try:
+        result = find_phone_transactions(transactions)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
+
+
+@app.get("/api/person-transfers")
+async def person_transfers() -> List[Dict[str, Any]]:
+    """
+    Поиск переводов физическим лицам
+
+    Returns:
+        Список переводов физлицам
+    """
+    try:
+        result = find_person_transfers(transactions)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
+
+
+@app.get("/health")
+async def health_check() -> Dict[str, str]:
+    """Проверка здоровья приложения"""
+    return {"status": "healthy", "operations_loaded": str(len(operations))}
+
+
+# Обработчики ошибок
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервера"})
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)

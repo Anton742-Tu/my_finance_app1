@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Optional
 
 
 @dataclass
@@ -25,24 +25,42 @@ class Operation:
     def from_dict(cls, data: dict) -> "Operation":
         """Создает операцию из словаря данных (из Excel строки)"""
         try:
+            # Обрабатываем отсутствующие даты платежа
+            payment_date_str = data.get("Дата платежа")
+            if payment_date_str in [None, "nan", ""]:
+                # Если дата платежа отсутствует, используем дату операции
+                payment_date = datetime.strptime(str(data["Дата операции"]).strip(), "%d.%m.%Y %H:%M:%S")
+            else:
+                payment_date = datetime.strptime(str(payment_date_str).strip(), "%d.%m.%Y")
+
+            # Обрабатываем MCC
+            mcc_value = data.get("MCC")
+            if mcc_value in [None, "nan", ""]:
+                mcc = None
+            else:
+                try:
+                    mcc = int(float(mcc_value)) if mcc_value else None
+                except (ValueError, TypeError):
+                    mcc = None
+
             return cls(
                 date=datetime.strptime(str(data["Дата операции"]).strip(), "%d.%m.%Y %H:%M:%S"),
-                payment_date=datetime.strptime(str(data["Дата платежа"]).strip(), "%d.%m.%Y"),
-                card_number=str(data.get("Номер карты", "")),
-                status=str(data.get("Статус", "OK")),
+                payment_date=payment_date,
+                card_number=str(data.get("Номер карты", "") or ""),
+                status=str(data.get("Статус", "OK") or "OK"),
                 amount=abs(Decimal(str(data["Сумма операции"]).replace(",", "."))),
-                currency=str(data.get("Валюта операции", "RUB")),
-                cashback=Decimal(str(data.get("Кэшбэк", "0")).replace(",", ".")),
-                category=str(data.get("Категория", "")),
-                mcc=int(data["MCC"]) if data.get("MCC") not in [None, ""] and str(data["MCC"]).isdigit() else None,
-                description=str(data.get("Описание", "")),
-                bonuses=Decimal(str(data.get("Бонусы (включая кэшбэк)", "0")).replace(",", ".")),
-                rounding=Decimal(str(data.get("Округление на инвесткопилку", "0")).replace(",", ".")),
+                currency=str(data.get("Валюта операции", "RUB") or "RUB"),
+                cashback=Decimal(str(data.get("Кэшбэк", "0") or "0").replace(",", ".")),
+                category=str(data.get("Категория", "") or ""),
+                mcc=mcc,
+                description=str(data.get("Описание", "") or ""),
+                bonuses=Decimal(str(data.get("Бонусы (включая кэшбэк)", "0") or "0").replace(",", ".")),
+                rounding=Decimal(str(data.get("Округление на инвесткопилку", "0") or "0").replace(",", ".")),
             )
         except (ValueError, KeyError) as e:
             raise ValueError(f"Ошибка создания операции из данных: {data}. Ошибка: {e}")
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict:
         """Преобразует операцию в словарь (для JSON ответа)"""
         return {
             "date": self.date.isoformat(),

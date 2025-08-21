@@ -1,7 +1,8 @@
-from datetime import datetime  # Добавляем импорт datetime
+from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+import numpy as np
 import pandas as pd
 
 from src.models.operation import Operation
@@ -17,20 +18,25 @@ def load_operations_from_excel(file_path: str) -> List[Operation]:
 
     for _, row in df.iterrows():
         try:
+            # Обрабатываем NaN значения
             operation_data = {
-                "Дата операции": str(row["Дата операции"]),
-                "Дата платежа": str(row["Дата платежа"]),
-                "Номер карты": str(row.get("Номер карты", "")),
-                "Статус": str(row.get("Статус", "OK")),
-                "Сумма операции": str(row["Сумма операции"]),
-                "Валюта операции": str(row.get("Валюта операции", "RUB")),
-                "Кэшбэк": str(row.get("Кэшбэк", 0)),
-                "Категория": str(row.get("Категория", "")),
-                "MCC": row.get("MCC"),
-                "Описание": str(row.get("Описание", "")),
-                "Бонусы (включая кэшбэк)": str(row.get("Бонусы (включая кэшбэк)", 0)),
-                "Округление на инвесткопилку": str(row.get("Округление на инвесткопилку", 0)),
+                "Дата операции": _handle_nan_value(row.get("Дата операции")),
+                "Дата платежа": _handle_nan_value(row.get("Дата платежа")),
+                "Номер карты": _handle_nan_value(row.get("Номер карты", "")),
+                "Статус": _handle_nan_value(row.get("Статус", "OK")),
+                "Сумма операции": _handle_nan_value(row.get("Сумма операции")),
+                "Валюта операции": _handle_nan_value(row.get("Валюта операции", "RUB")),
+                "Кэшбэк": _handle_nan_value(row.get("Кэшбэк", "0")),
+                "Категория": _handle_nan_value(row.get("Категория", "")),
+                "MCC": _handle_nan_value(row.get("MCC")),
+                "Описание": _handle_nan_value(row.get("Описание", "")),
+                "Бонусы (включая кэшбэк)": _handle_nan_value(row.get("Бонусы (включая кэшбэк)", "0")),
+                "Округление на инвесткопилку": _handle_nan_value(row.get("Округление на инвесткопилку", "0")),
             }
+
+            # Пропускаем строки с отсутствующей датой операции
+            if operation_data["Дата операции"] in [None, "nan", ""]:
+                continue
 
             operation = Operation.from_dict(operation_data)
             operations.append(operation)
@@ -40,6 +46,13 @@ def load_operations_from_excel(file_path: str) -> List[Operation]:
             continue
 
     return operations
+
+
+def _handle_nan_value(value) -> Optional[str]:
+    """Обрабатывает NaN значения из pandas"""
+    if pd.isna(value) or value in [None, np.nan, "nan", "NaN", "NAN"]:
+        return None
+    return str(value) if value is not None else None
 
 
 def filter_operations_by_date(
