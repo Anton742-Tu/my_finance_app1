@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -48,7 +48,7 @@ def load_operations_from_excel(file_path: str) -> List[Operation]:
     return operations
 
 
-def _handle_nan_value(value) -> Optional[str]:
+def _handle_nan_value(value: Any) -> Optional[str]:
     """Обрабатывает NaN значения из pandas"""
     if pd.isna(value) or value in [None, np.nan, "nan", "NaN", "NAN"]:
         return None

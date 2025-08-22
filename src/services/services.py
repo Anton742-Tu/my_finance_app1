@@ -1,9 +1,6 @@
-import json
 import logging
 import re
-from collections import defaultdict
 from datetime import datetime
-from decimal import Decimal
 from functools import reduce
 from typing import Any, Dict, List, TypedDict
 
@@ -25,14 +22,6 @@ class Transaction(TypedDict):
 def analyze_cashback_categories(transactions: List[Transaction], year: int, month: int) -> Dict[str, float]:
     """
     Анализирует выгодность категорий для повышенного кешбэка.
-
-    Args:
-        transactions: Список транзакций
-        year: Год для анализа
-        month: Месяц для анализа (1-12)
-
-    Returns:
-        Словарь с категориями и суммами кешбэка
     """
     logger.info(f"Анализ кешбэка за {month}/{year}")
 
@@ -50,8 +39,8 @@ def analyze_cashback_categories(transactions: List[Transaction], year: int, mont
             acc[txn["category"]] = acc.get(txn["category"], 0.0) + txn["cashback"]
         return acc
 
-    # Функциональный pipeline
-    result = reduce(calculate_category_cashback, filter(filter_by_date, transactions), {})
+    # Функциональный pipeline с аннотацией типа
+    result: Dict[str, float] = reduce(calculate_category_cashback, filter(filter_by_date, transactions), {})
 
     logger.debug(f"Результат анализа кешбэка: {result}")
     return dict(sorted(result.items(), key=lambda x: x[1], reverse=True))
@@ -61,31 +50,26 @@ def analyze_cashback_categories(transactions: List[Transaction], year: int, mont
 def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) -> float:
     """
     Рассчитывает сумму для инвесткопилки через округление трат.
-
-    Args:
-        month: Месяц в формате 'YYYY-MM'
-        transactions: Список транзакций
-        limit: Предел округления (10, 50, 100)
-
-    Returns:
-        Сумма для инвесткопилки
     """
     logger.info(f"Расчет инвесткопилки за {month} с лимитом {limit}")
 
     def filter_by_month(txn: Dict[str, Any]) -> bool:
         """Фильтрует транзакции по месяцу"""
         try:
-            return txn["date"].startswith(month)
+            txn_date = txn.get("date", "")
+            if isinstance(txn_date, str):
+                return txn_date.startswith(month)
+            return False
         except (KeyError, AttributeError):
             return False
 
     def calculate_rounding(txn: Dict[str, Any]) -> float:
         """Рассчитывает округление для одной транзакции"""
         try:
-            amount = abs(txn["amount"])  # Берем абсолютное значение для расходов
+            amount = abs(float(txn.get("amount", 0)))  # Берем абсолютное значение для расходов
             rounded = ((amount + limit - 1) // limit) * limit
-            return rounded - amount
-        except (KeyError, TypeError):
+            return float(rounded - amount)
+        except (KeyError, TypeError, ValueError):
             return 0.0
 
     # Функциональный подход
@@ -98,39 +82,30 @@ def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) 
 
 
 # 3. Простой поиск
-def simple_search(transactions: List[Transaction], search_query: str) -> List[Transaction]:
+def simple_search(transactions: List[Transaction], search_query: str) -> List[Dict[str, Any]]:
     """
     Поиск транзакций по описанию или категории.
-
-    Args:
-        transactions: Список транзакций
-        search_query: Строка для поиска
-
-    Returns:
-        Отфильтрованные транзакции
     """
     logger.info(f"Поиск по запросу: '{search_query}'")
 
     def matches_query(txn: Transaction) -> bool:
         """Проверяет совпадение с запросом"""
         query_lower = search_query.lower()
-        return query_lower in txn.get("description", "").lower() or query_lower in txn.get("category", "").lower()
+        description = txn.get("description", "")
+        category = txn.get("category", "")
+
+        return query_lower in description.lower() or query_lower in category.lower()
 
     result = list(filter(matches_query, transactions))
     logger.debug(f"Найдено транзакций: {len(result)}")
-    return result
+    # Возвращаем как список словарей для совместимости
+    return [dict(txn) for txn in result]
 
 
 # 4. Поиск по телефонным номерам
-def find_phone_transactions(transactions: List[Transaction]) -> List[Transaction]:
+def find_phone_transactions(transactions: List[Transaction]) -> List[Dict[str, Any]]:
     """
     Находит транзакции с телефонными номерами в описании.
-
-    Args:
-        transactions: Список транзакций
-
-    Returns:
-        Транзакции с телефонными номерами
     """
     logger.info("Поиск транзакций с телефонными номерами")
 
@@ -144,19 +119,13 @@ def find_phone_transactions(transactions: List[Transaction]) -> List[Transaction
 
     result = list(filter(has_phone_number, transactions))
     logger.debug(f"Найдено транзакций с телефонами: {len(result)}")
-    return result
+    return [dict(txn) for txn in result]
 
 
 # 5. Поиск переводов физическим лицам
-def find_person_transfers(transactions: List[Transaction]) -> List[Transaction]:
+def find_person_transfers(transactions: List[Transaction]) -> List[Dict[str, Any]]:
     """
     Находит переводы физическим лицам.
-
-    Args:
-        transactions: Список транзакций
-
-    Returns:
-        Транзакции-переводы физлицам
     """
     logger.info("Поиск переводов физическим лицам")
 
@@ -172,19 +141,22 @@ def find_person_transfers(transactions: List[Transaction]) -> List[Transaction]:
 
     result = list(filter(is_person_transfer, transactions))
     logger.debug(f"Найдено переводов физлицам: {len(result)}")
-    return result
+    return [dict(txn) for txn in result]
 
 
 # Утилиты для конвертации
 def convert_operations_to_transactions(operations: List[Any]) -> List[Transaction]:
     """Конвертирует операции в транзакции для сервисов"""
-    return [
-        {
+    transactions_list: List[Transaction] = []
+
+    for op in operations:
+        transaction: Transaction = {
             "date": op.date.isoformat(),
             "amount": float(op.amount),
             "category": op.category,
             "description": op.description,
             "cashback": float(op.cashback),
         }
-        for op in operations
-    ]
+        transactions_list.append(transaction)
+
+    return transactions_list

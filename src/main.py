@@ -1,11 +1,12 @@
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from src.services.excel_processor import load_operations_from_excel
 from src.services.services import (
+    Transaction,
     analyze_cashback_categories,
     convert_operations_to_transactions,
     find_person_transfers,
@@ -18,17 +19,22 @@ from src.views.home import get_home_data
 
 app = FastAPI(title="My Finance App API", version="1.0.0")
 
+# Глобальные переменные для хранения данных
+operations: List[Any] = []
+transactions: List[Transaction] = []
 
+
+# Загружаем операции при старте приложения
 @app.on_event("startup")
 async def startup_event() -> None:
     """Загрузка операций при запуске приложения"""
+    global operations, transactions
     try:
-        global operations, transactions
         operations = load_operations_from_excel("data/operations.xlsx")
         transactions = convert_operations_to_transactions(operations)
-        print(f"Успешно загружено {len(operations)} операций")
+        print(f"Загружено {len(operations)} операций")
     except FileNotFoundError as e:
-        print(f"Ошибка: Файл не найден: {e}")
+        print(f"Ошибка загрузки файла: {e}")
         operations = []
         transactions = []
     except Exception as e:
@@ -49,7 +55,7 @@ async def home(date: str = "2024-01-15 12:00:00") -> Dict[str, Any]:
 
 
 @app.get("/events/{date_str}")
-async def events(date_str: str, period: str = "M") -> Dict[str, Any]:
+async def events(date_str: str, period: Literal["W", "M", "Y", "ALL"] = "M") -> Dict[str, Any]:
     """Страница событий с фильтрацией по дате"""
     try:
         return await events_page(date_str, period)
@@ -64,13 +70,6 @@ async def events(date_str: str, period: str = "M") -> Dict[str, Any]:
 async def cashback_analysis(year: int, month: int) -> Dict[str, float]:
     """
     Анализ выгодных категорий для повышенного кешбэка
-
-    Args:
-        year: Год для анализа (например, 2024)
-        month: Месяц для анализа (1-12)
-
-    Returns:
-        Словарь с категориями и суммами кешбэка
     """
     if not 1 <= month <= 12:
         raise HTTPException(status_code=400, detail="Месяц должен быть от 1 до 12")
@@ -86,13 +85,6 @@ async def cashback_analysis(year: int, month: int) -> Dict[str, float]:
 async def investment_savings(month: str, limit: int = 100) -> Dict[str, float]:
     """
     Расчет суммы для инвесткопилки через округление трат
-
-    Args:
-        month: Месяц в формате YYYY-MM (например, 2024-01)
-        limit: Предел округления (10, 50, 100) - по умолчанию 100
-
-    Returns:
-        Сумма для инвесткопилки
     """
     if limit not in [10, 50, 100]:
         raise HTTPException(status_code=400, detail="Лимит должен быть 10, 50 или 100")
@@ -119,16 +111,10 @@ async def investment_savings(month: str, limit: int = 100) -> Dict[str, float]:
 async def search_transactions(query: str) -> List[Dict[str, Any]]:
     """
     Поиск транзакций по описанию или категории
-
-    Args:
-        query: Строка для поиска
-
-    Returns:
-        Список найденных транзакций
     """
     try:
         result = simple_search(transactions, query)
-        return result
+        return result  # Теперь возвращает уже готовые dict
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
 
@@ -137,13 +123,10 @@ async def search_transactions(query: str) -> List[Dict[str, Any]]:
 async def phone_transactions() -> List[Dict[str, Any]]:
     """
     Поиск транзакций с телефонными номерами в описании
-
-    Returns:
-        Список транзакций с телефонными номерами
     """
     try:
         result = find_phone_transactions(transactions)
-        return result
+        return [dict(transaction) for transaction in result]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
 
@@ -152,13 +135,10 @@ async def phone_transactions() -> List[Dict[str, Any]]:
 async def person_transfers() -> List[Dict[str, Any]]:
     """
     Поиск переводов физическим лицам
-
-    Returns:
-        Список переводов физлицам
     """
     try:
         result = find_person_transfers(transactions)
-        return result
+        return [dict(transaction) for transaction in result]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
 
@@ -171,12 +151,12 @@ async def health_check() -> Dict[str, str]:
 
 # Обработчики ошибок
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
+async def http_exception_handler(request: Any, exc: HTTPException) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 @app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
+async def general_exception_handler(request: Any, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервера"})
 
 
