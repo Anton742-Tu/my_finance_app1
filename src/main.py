@@ -1,21 +1,26 @@
 from datetime import datetime
-from typing import Any, Dict, List, Literal
-
+from typing import List, Dict, Any, Literal, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
+from src.views.home import get_home_data
+from src.views.events import events_page
 from src.services.excel_processor import load_operations_from_excel
 from src.services.services import (
-    Transaction,
     analyze_cashback_categories,
-    convert_operations_to_transactions,
-    find_person_transfers,
-    find_phone_transactions,
     investment_bank,
     simple_search,
+    find_phone_transactions,
+    find_person_transfers,
+    convert_operations_to_transactions,
+    Transaction,
 )
-from src.views.events import events_page
-from src.views.home import get_home_data
+from src.services.reports import (
+    category_spending_report,
+    weekday_spending_report,
+    workday_weekend_spending_report,
+    transactions_to_dataframe,
+)
 
 app = FastAPI(title="My Finance App API", version="1.0.0")
 
@@ -114,7 +119,7 @@ async def search_transactions(query: str) -> List[Dict[str, Any]]:
     """
     try:
         result = simple_search(transactions, query)
-        return result  # Теперь возвращает уже готовые dict
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
 
@@ -126,7 +131,7 @@ async def phone_transactions() -> List[Dict[str, Any]]:
     """
     try:
         result = find_phone_transactions(transactions)
-        return [dict(transaction) for transaction in result]
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
 
@@ -138,9 +143,49 @@ async def person_transfers() -> List[Dict[str, Any]]:
     """
     try:
         result = find_person_transfers(transactions)
-        return [dict(transaction) for transaction in result]
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
+
+
+# Эндпоинты для отчетов
+@app.get("/api/reports/category/{category}")
+async def category_report(category: str, date: Optional[str] = None) -> Dict[str, float]:
+    """Отчет по тратам категории"""
+    try:
+        # Конвертируем Transaction в обычные dict для DataFrame
+        transactions_dict = [dict(txn) for txn in transactions]
+        df = transactions_to_dataframe(transactions_dict)
+        result: Dict[str, float] = category_spending_report(df, category, date)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка отчета: {str(e)}")
+
+
+@app.get("/api/reports/weekdays")
+async def weekdays_report(date: Optional[str] = None) -> Dict[str, float]:
+    """Отчет по дням недели"""
+    try:
+        # Конвертируем Transaction в обычные dict для DataFrame
+        transactions_dict = [dict(txn) for txn in transactions]
+        df = transactions_to_dataframe(transactions_dict)
+        result: Dict[str, float] = weekday_spending_report(df, date)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка отчета: {str(e)}")
+
+
+@app.get("/api/reports/day-type")
+async def day_type_report(date: Optional[str] = None) -> Dict[str, float]:
+    """Отчет по типам дней (рабочие/выходные)"""
+    try:
+        # Конвертируем Transaction в обычные dict для DataFrame
+        transactions_dict = [dict(txn) for txn in transactions]
+        df = transactions_to_dataframe(transactions_dict)
+        result: Dict[str, float] = workday_weekend_spending_report(df, date)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка отчета: {str(e)}")
 
 
 @app.get("/health")
