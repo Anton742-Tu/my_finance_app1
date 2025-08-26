@@ -7,7 +7,6 @@ from typing import Any, Dict, List, TypedDict
 logger = logging.getLogger(__name__)
 
 
-# Типы для TypeScript-like разработки
 class Transaction(TypedDict):
     """Типизированная транзакция"""
 
@@ -18,7 +17,6 @@ class Transaction(TypedDict):
     cashback: float
 
 
-# 1. Сервис выгодных категорий повышенного кешбэка
 def analyze_cashback_categories(transactions: List[Transaction], year: int, month: int) -> Dict[str, float]:
     """
     Анализирует выгодность категорий для повышенного кешбэка.
@@ -39,14 +37,12 @@ def analyze_cashback_categories(transactions: List[Transaction], year: int, mont
             acc[txn["category"]] = acc.get(txn["category"], 0.0) + txn["cashback"]
         return acc
 
-    # Функциональный pipeline с аннотацией типа
     result: Dict[str, float] = reduce(calculate_category_cashback, filter(filter_by_date, transactions), {})
 
     logger.debug(f"Результат анализа кешбэка: {result}")
     return dict(sorted(result.items(), key=lambda x: x[1], reverse=True))
 
 
-# 2. Сервис инвесткопилки
 def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) -> float:
     """
     Рассчитывает сумму для инвесткопилки через округление трат.
@@ -66,13 +62,12 @@ def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) 
     def calculate_rounding(txn: Dict[str, Any]) -> float:
         """Рассчитывает округление для одной транзакции"""
         try:
-            amount = abs(float(txn.get("amount", 0)))  # Берем абсолютное значение для расходов
+            amount = abs(float(txn.get("amount", 0)))
             rounded = ((amount + limit - 1) // limit) * limit
             return float(rounded - amount)
         except (KeyError, TypeError, ValueError):
             return 0.0
 
-    # Функциональный подход
     monthly_transactions = filter(filter_by_month, transactions)
     roundings = map(calculate_rounding, monthly_transactions)
     total_savings = sum(roundings)
@@ -81,7 +76,6 @@ def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) 
     return round(total_savings, 2)
 
 
-# 3. Простой поиск
 def simple_search(transactions: List[Transaction], search_query: str) -> List[Dict[str, Any]]:
     """
     Поиск транзакций по описанию или категории.
@@ -98,18 +92,15 @@ def simple_search(transactions: List[Transaction], search_query: str) -> List[Di
 
     result = list(filter(matches_query, transactions))
     logger.debug(f"Найдено транзакций: {len(result)}")
-    # Возвращаем как список словарей для совместимости
     return [dict(txn) for txn in result]
 
 
-# 4. Поиск по телефонным номерам
 def find_phone_transactions(transactions: List[Transaction]) -> List[Dict[str, Any]]:
     """
     Находит транзакции с телефонными номерами в описании.
     """
     logger.info("Поиск транзакций с телефонными номерами")
 
-    # Регулярное выражение для российских номеров
     phone_pattern = re.compile(r"(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}")
 
     def has_phone_number(txn: Transaction) -> bool:
@@ -122,14 +113,12 @@ def find_phone_transactions(transactions: List[Transaction]) -> List[Dict[str, A
     return [dict(txn) for txn in result]
 
 
-# 5. Поиск переводов физическим лицам
 def find_person_transfers(transactions: List[Transaction]) -> List[Dict[str, Any]]:
     """
     Находит переводы физическим лицам.
     """
     logger.info("Поиск переводов физическим лицам")
 
-    # Паттерн для имени и фамилии с точкой
     name_pattern = re.compile(r"[А-Я][а-я]+\s[А-Я]\.")
 
     def is_person_transfer(txn: Transaction) -> bool:
@@ -144,7 +133,6 @@ def find_person_transfers(transactions: List[Transaction]) -> List[Dict[str, Any
     return [dict(txn) for txn in result]
 
 
-# Утилиты для конвертации
 def convert_operations_to_transactions(operations: List[Any]) -> List[Transaction]:
     """Конвертирует операции в транзакции для сервисов"""
     transactions_list: List[Transaction] = []

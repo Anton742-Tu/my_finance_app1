@@ -13,19 +13,16 @@ def get_currency_rates() -> Dict[str, float]:
         response.raise_for_status()
         data = response.json()
 
-        # Фиксированный список валют
         currencies = ["USD", "EUR", "GBP", "CNY"]
         return {curr: data["rates"].get(curr, 0.0) for curr in currencies}
 
     except Exception:
-        # Заглушки при ошибке
         return {"USD": 1.0, "EUR": 0.85, "GBP": 0.75, "CNY": 7.0}
 
 
 def get_stock_prices() -> Dict[str, float]:
     """Получает цены акций"""
     try:
-        # Фиксированный список акций
         stocks = ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN"]
         prices = {}
 

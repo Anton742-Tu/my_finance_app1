@@ -78,11 +78,10 @@ def test_operation_missing_data() -> None:
         "Дата операции": "01.01.2023 12:00:00",
         "Дата платежа": "02.01.2023",
         "Сумма операции": "-100,50",
-        # Остальные поля отсутствуют
     }
 
     op = Operation.from_dict(data)
     assert op.amount == Decimal("100.50")
-    assert op.currency == "RUB"  # Значение по умолчанию
-    assert op.cashback == Decimal("0")  # Значение по умолчанию
-    assert op.category == ""  # Значение по умолчанию
+    assert op.currency == "RUB"
+    assert op.cashback == Decimal("0")
+    assert op.category == ""

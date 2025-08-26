@@ -8,12 +8,10 @@ def analyze_spending(operations: List[Operation]) -> Dict[str, Any]:
     """Анализирует расходы по категориям"""
     expenses = [op for op in operations if op.amount > 0]
 
-    # Добавляем аннотацию типа для by_category
     by_category: Dict[str, Decimal] = {}
     for op in expenses:
         by_category[op.category] = by_category.get(op.category, Decimal("0")) + op.amount
 
-    # Явно вычисляем total_spent с правильным типом
     total_spent = Decimal("0")
     for op in expenses:
         total_spent += op.amount

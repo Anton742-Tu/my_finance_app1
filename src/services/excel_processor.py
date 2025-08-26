@@ -18,7 +18,6 @@ def load_operations_from_excel(file_path: str) -> List[Operation]:
 
     for _, row in df.iterrows():
         try:
-            # Обрабатываем NaN значения
             operation_data = {
                 "Дата операции": _handle_nan_value(row.get("Дата операции")),
                 "Дата платежа": _handle_nan_value(row.get("Дата платежа")),
@@ -34,7 +33,6 @@ def load_operations_from_excel(file_path: str) -> List[Operation]:
                 "Округление на инвесткопилку": _handle_nan_value(row.get("Округление на инвесткопилку", "0")),
             }
 
-            # Пропускаем строки с отсутствующей датой операции
             if operation_data["Дата операции"] in [None, "nan", ""]:
                 continue
 

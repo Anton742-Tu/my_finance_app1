@@ -24,12 +24,10 @@ from src.services.reports import (
 
 app = FastAPI(title="My Finance App API", version="1.0.0")
 
-# Глобальные переменные для хранения данных
 operations: List[Any] = []
 transactions: List[Transaction] = []
 
 
-# Загружаем операции при старте приложения
 @app.on_event("startup")
 async def startup_event() -> None:
     """Загрузка операций при запуске приложения"""
@@ -68,9 +66,6 @@ async def events(date_str: str, period: Literal["W", "M", "Y", "ALL"] = "M") -> 
         raise HTTPException(status_code=400, detail="Неверный формат даты")
 
 
-# Новые эндпоинты для сервисов
-
-
 @app.get("/api/cashback-analysis/{year}/{month}")
 async def cashback_analysis(year: int, month: int) -> Dict[str, float]:
     """
@@ -95,7 +90,6 @@ async def investment_savings(month: str, limit: int = 100) -> Dict[str, float]:
         raise HTTPException(status_code=400, detail="Лимит должен быть 10, 50 или 100")
 
     try:
-        # Конвертируем операции в формат для сервиса
         transactions_for_investment = [
             {
                 "date": op.date.isoformat(),
@@ -148,12 +142,10 @@ async def person_transfers() -> List[Dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {str(e)}")
 
 
-# Эндпоинты для отчетов
 @app.get("/api/reports/category/{category}")
 async def category_report(category: str, date: Optional[str] = None) -> Dict[str, float]:
     """Отчет по тратам категории"""
     try:
-        # Конвертируем Transaction в обычные dict для DataFrame
         transactions_dict = [dict(txn) for txn in transactions]
         df = transactions_to_dataframe(transactions_dict)
         result: Dict[str, float] = category_spending_report(df, category, date)
@@ -166,7 +158,6 @@ async def category_report(category: str, date: Optional[str] = None) -> Dict[str
 async def weekdays_report(date: Optional[str] = None) -> Dict[str, float]:
     """Отчет по дням недели"""
     try:
-        # Конвертируем Transaction в обычные dict для DataFrame
         transactions_dict = [dict(txn) for txn in transactions]
         df = transactions_to_dataframe(transactions_dict)
         result: Dict[str, float] = weekday_spending_report(df, date)
@@ -179,7 +170,6 @@ async def weekdays_report(date: Optional[str] = None) -> Dict[str, float]:
 async def day_type_report(date: Optional[str] = None) -> Dict[str, float]:
     """Отчет по типам дней (рабочие/выходные)"""
     try:
-        # Конвертируем Transaction в обычные dict для DataFrame
         transactions_dict = [dict(txn) for txn in transactions]
         df = transactions_to_dataframe(transactions_dict)
         result: Dict[str, float] = workday_weekend_spending_report(df, date)
@@ -194,7 +184,6 @@ async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "operations_loaded": str(len(operations))}
 
 
-# Обработчики ошибок
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Any, exc: HTTPException) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

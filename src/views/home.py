@@ -9,7 +9,6 @@ def get_home_data(excel_path: str, target_date: datetime) -> dict:
     """Генерирует данные для главной страницы"""
     operations = load_operations_from_excel(excel_path)
 
-    # Фильтруем по месяцу
     start_date = target_date.replace(day=1)
     monthly_ops = [op for op in operations if start_date <= op.date <= target_date]
 

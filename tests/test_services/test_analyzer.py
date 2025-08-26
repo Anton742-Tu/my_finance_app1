@@ -45,7 +45,7 @@ def sample_operations() -> List[Operation]:
             payment_date=datetime(2023, 1, 4),
             card_number="*9012",
             status="OK",
-            amount=Decimal("-50.00"),  # Доход (отрицательная сумма)
+            amount=Decimal("-50.00"),
             currency="RUB",
             cashback=Decimal("0.00"),
             category="Income",
@@ -64,7 +64,7 @@ def test_analyze_spending(sample_operations: List[Operation]) -> None:
     assert result["total_spent"] == Decimal("300.00")  # 100 + 200
     assert result["by_category"]["Food"] == Decimal("100.00")
     assert result["by_category"]["Transport"] == Decimal("200.00")
-    assert "Income" not in result["by_category"]  # Доходы не должны учитываться
+    assert "Income" not in result["by_category"]
 
 
 def test_get_top_transactions(sample_operations: List[Operation]) -> None:
@@ -72,8 +72,8 @@ def test_get_top_transactions(sample_operations: List[Operation]) -> None:
     top_ops = get_top_transactions(sample_operations, 2)
 
     assert len(top_ops) == 2
-    assert top_ops[0].amount == Decimal("200.00")  # Самая крупная
-    assert top_ops[1].amount == Decimal("100.00")  # Вторая по величине
+    assert top_ops[0].amount == Decimal("200.00")
+    assert top_ops[1].amount == Decimal("100.00")
 
 
 def test_calculate_cashback(sample_operations: List[Operation]) -> None:

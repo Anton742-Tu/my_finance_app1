@@ -27,7 +27,6 @@ def test_get_currency_rates_failure(mock_get: Mock) -> None:
 
     result = get_currency_rates()
 
-    # Должны вернуться заглушки
     assert result["USD"] == 1.0
     assert result["EUR"] == 0.85
 
@@ -39,5 +38,4 @@ def test_get_stock_prices_success(mock_get: Mock) -> None:
 
     result = get_stock_prices()
 
-    # Проверяем, что возвращаются значения (мок срабатывает только на первый вызов)
     assert len(result) > 0

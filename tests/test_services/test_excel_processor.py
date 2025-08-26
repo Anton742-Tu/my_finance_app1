@@ -54,7 +54,6 @@ def test_filter_operations_by_date(sample_excel: Path) -> None:
     """Тест фильтрации операций по дате"""
     operations = load_operations_from_excel(str(sample_excel))
 
-    # Фильтруем только первую операцию
     filtered = filter_operations_by_date(operations, datetime(2023, 1, 1), datetime(2023, 1, 1, 23, 59))
 
     assert len(filtered) == 1

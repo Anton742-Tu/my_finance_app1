@@ -25,15 +25,12 @@ class Operation:
     def from_dict(cls, data: dict) -> "Operation":
         """Создает операцию из словаря данных (из Excel строки)"""
         try:
-            # Обрабатываем отсутствующие даты платежа
             payment_date_str = data.get("Дата платежа")
             if payment_date_str in [None, "nan", ""]:
-                # Если дата платежа отсутствует, используем дату операции
                 payment_date = datetime.strptime(str(data["Дата операции"]).strip(), "%d.%m.%Y %H:%M:%S")
             else:
                 payment_date = datetime.strptime(str(payment_date_str).strip(), "%d.%m.%Y")
 
-            # Обрабатываем MCC
             mcc_value = data.get("MCC")
             if mcc_value in [None, "nan", ""]:
                 mcc = None
