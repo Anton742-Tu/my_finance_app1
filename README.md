@@ -46,9 +46,21 @@ poetry install
 ### 2. Настройка окружения
 #### Создайте файл .env:
 ```env
-EXCEL_FILE_PATH=data/operations.xlsx
-SUPPORTED_CURRENCIES=USD,EUR,GBP,CNY
-SUPPORTED_STOCKS=AAPL,GOOGL,MSFT,TSLA,AMZN
+# Пути к файлам
+FINANCE_EXCEL_FILE_PATH=data/operations.xlsx
+FINANCE_USER_SETTINGS_PATH=user_settings.json
+
+# API URLs
+FINANCE_CURRENCY_API_URL=https://api.exchangerate-api.com/v4/latest/USD
+FINANCE_STOCK_API_BASE=https://api.iextrading.com/1.0/stock
+
+# Списки валют и акций
+FINANCE_SUPPORTED_CURRENCIES=USD,EUR,GBP,CNY
+FINANCE_SUPPORTED_STOCKS=AAPL,GOOGL,MSFT,TSLA,AMZN
+
+# Настройки приложения
+FINANCE_DEFAULT_DATE_FORMAT=%Y-%m-%d %H:%M:%S
+FINANCE_REPORT_DIR=reports
 ```
 ### 3. Запуск приложения
 ```bash
