@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict, List
 
@@ -7,9 +8,9 @@ import requests
 
 
 def get_currency_rates() -> Dict[str, float]:
-    """Получает курсы валют"""
     try:
-        response = requests.get("https://api.exchangerate-api.com/v4/latest/USD", timeout=5)
+        api_url = os.getenv("CURRENCY_API_URL", "https://api.exchangerate-api.com/v4/latest/USD")
+        response = requests.get(api_url, timeout=5)
         response.raise_for_status()
         data = response.json()
 

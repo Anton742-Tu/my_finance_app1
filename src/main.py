@@ -24,10 +24,11 @@ from src.services.reports import (
 
 app = FastAPI(title="My Finance App API", version="1.0.0")
 
+# Глобальные переменные для хранения данных
 operations: List[Any] = []
 transactions: List[Transaction] = []
 
-
+# Загружаем операции при старте приложения
 @app.on_event("startup")
 async def startup_event() -> None:
     """Загрузка операций при запуске приложения"""

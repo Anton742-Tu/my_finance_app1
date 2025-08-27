@@ -42,7 +42,6 @@ def analyze_cashback_categories(transactions: List[Transaction], year: int, mont
     logger.debug(f"Результат анализа кешбэка: {result}")
     return dict(sorted(result.items(), key=lambda x: x[1], reverse=True))
 
-
 def investment_bank(month: str, transactions: List[Dict[str, Any]], limit: int) -> float:
     """
     Рассчитывает сумму для инвесткопилки через округление трат.

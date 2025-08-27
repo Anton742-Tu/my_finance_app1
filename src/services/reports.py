@@ -75,7 +75,6 @@ def category_spending_report(
     for month in dates:
         monthly_data = df[df['date'].str.startswith(month)]
         category_data = monthly_data[monthly_data['category'] == category]
-)
         spending = category_data[category_data['amount'] < 0]['amount'].abs().sum()
         result[month] = round(float(spending), 2)
 
