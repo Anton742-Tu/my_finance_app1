@@ -64,7 +64,8 @@ FINANCE_REPORT_DIR=reports
 ```
 ### 3. Запуск приложения
 ```bash
-poetry run python src/main.py
+uvicorn src.main:app --reload
+
 ```
  - Приложение будет доступно по адресу: http://localhost:8000
 ## 📊 API Endpoints
